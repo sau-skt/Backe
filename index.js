@@ -50,6 +50,31 @@ app.get('/select', (req, res) => {
     });
 });
 
+app.get('/isexistinguser', (req, res) => {
+    const { phone_number } = req.query; // Use req.query for GET request
+
+    if (!phone_number) {
+        return res.status(400).send('Phone number cannot be empty');
+    }
+
+    const query = 'SELECT * FROM user_profile WHERE phone_number = ?';
+    
+    db.query(query, [phone_number], (err, result) => {
+        if (err) {
+            console.error('Error executing query', err);
+            return res.status(500).send('Internal server error');
+        }
+
+        if (result.length > 0) {
+            return res.status(200).json({ exists: true});
+        } else {
+            return res.status(200).json({ exists: false });
+        }
+    });
+});
+
+
+
 // Route to insert country using request body
 app.post('/insert', (req, res) => {
     const { phone_number, first_name, last_name, secondary_number, primary_email, secondary_email, company, designation, company_start_date, company_end_date, profile_description, mac_id, linkedin_profile_link } = req.body; // Get countryName and population from request body
@@ -59,8 +84,8 @@ app.post('/insert', (req, res) => {
         return res.status(400).send('Some field is empty');
     }
 
-    const query = 'INSERT INTO user_profile (phone_number, first_name, last_name, secondary_number, primary_email, secondary_email, company, designation, company_start_date, company_end_date, profile_description, mac_id, linkedin_profile_link) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-    const values = [phone_number, first_name, last_name, secondary_number, primary_email, secondary_email, company, designation, company_start_date, company_end_date, profile_description, mac_id, linkedin_profile_link];
+    const query = 'INSERT INTO user_profile (phone_number, first_name, last_name, secondary_number, primary_email, secondary_email, company, designation, company_start_date, company_end_date, profile_description, mac_id, linkedin_profile_link) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE mac_id = ?';
+    const values = [phone_number, first_name, last_name, secondary_number, primary_email, secondary_email, company, designation, company_start_date, company_end_date, profile_description, mac_id, linkedin_profile_link, mac_id];
 
     db.query(query, values, (err, result) => {
         if (err) {
@@ -69,7 +94,7 @@ app.post('/insert', (req, res) => {
             return;
         }
 
-        res.send(result);
+        res.send('User is registered successfully');
     });
 });
 
