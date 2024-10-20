@@ -50,7 +50,24 @@ app.get('/select', (req, res) => {
     });
 });
 
-app.get('/isexistinguser', (req, res) => {
+function isRegistered(phone_number) {
+    return new Promise((resolve, reject) => {
+        const query = 'SELECT * FROM user_profile WHERE phone_number = ?';
+        
+        db.query(query, [phone_number], (err, result) => {
+            if (err) {
+                return reject(err);
+            }
+            if (result.length > 0) {
+                resolve(true);  // User exists
+            } else {
+                resolve(false); // User doesn't exist
+            }
+        });
+    });
+}
+
+app.get('/isUserRegistered', (req, res) => {
     const { phone_number } = req.query; // Use req.query for GET request
 
     if (!phone_number) {
@@ -66,36 +83,45 @@ app.get('/isexistinguser', (req, res) => {
         }
 
         if (result.length > 0) {
-            return res.status(200).json({ exists: true});
+            return res.status(400).json({ userAlreadyExists: true});
         } else {
-            return res.status(200).json({ exists: false });
+            return res.status(200).json({ userAlreadyExists: false });
         }
     });
 });
 
 
 
-// Route to insert country using request body
-app.post('/insert', (req, res) => {
-    const { phone_number, first_name, last_name, secondary_number, primary_email, secondary_email, company, designation, company_start_date, company_end_date, profile_description, mac_id, linkedin_profile_link } = req.body; // Get countryName and population from request body
+app.post('/signup', async (req, res) => {
+    const { phone_number, first_name, last_name, secondary_number, primary_email, secondary_email, company, designation, company_start_date, company_end_date, profile_description, mac_id, linkedin_profile_link } = req.body;
 
-    // Check if both values are provided
-    if (!phone_number || !first_name || !last_name || !secondary_number || !primary_email || !secondary_email || !company || !designation || !company_start_date || !company_end_date || !profile_description || !mac_id || !linkedin_profile_link) {
-        return res.status(400).send('Some field is empty');
-    }
+    try {
+        // Check if the user is already registered
+        const userExists = await isRegistered(phone_number);
 
-    const query = 'INSERT INTO user_profile (phone_number, first_name, last_name, secondary_number, primary_email, secondary_email, company, designation, company_start_date, company_end_date, profile_description, mac_id, linkedin_profile_link) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE mac_id = ?';
-    const values = [phone_number, first_name, last_name, secondary_number, primary_email, secondary_email, company, designation, company_start_date, company_end_date, profile_description, mac_id, linkedin_profile_link, mac_id];
-
-    db.query(query, values, (err, result) => {
-        if (err) {
-            console.log(err);
-            res.status(500).send('Error occurred during the query.');
-            return;
+        if (userExists) {
+            // If user already exists, send a response without making a DB entry
+            return res.status(400).json({ message: 'User Already Exists With This Phone Number' });
         }
 
-        res.send('User is registered successfully');
-    });
+        // Proceed with user registration if the user doesn't exist
+        const query = 'INSERT INTO user_profile (phone_number, first_name, last_name, secondary_number, primary_email, secondary_email, company, designation, company_start_date, company_end_date, profile_description, mac_id, linkedin_profile_link) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE mac_id = ?';
+        const values = [phone_number, first_name, last_name, secondary_number, primary_email, secondary_email, company, designation, company_start_date, company_end_date, profile_description, mac_id, linkedin_profile_link, mac_id];
+
+        db.query(query, values, (err, result) => {
+            if (err) {
+                console.log(err);
+                return res.status(500).send('Error occurred during the query.');
+            }
+
+            // Respond after successful registration
+            res.status(200).send('');
+        });
+
+    } catch (err) {
+        console.error('Error checking user registration', err);
+        res.status(500).send('Internal server error');
+    }
 });
 
 // Send OTP endpoint
