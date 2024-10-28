@@ -197,7 +197,7 @@ app.post('/getUserList', (req, res) => {
     }
 
     // Construct the SQL query to fetch user profiles based on mac_ids
-    const query = `SELECT phone_number FROM user_profile WHERE mac_id IN (?)`;
+    const query = `SELECT * FROM user_profile WHERE mac_id IN (?)`;
 
     db.query(query, [macIds], (err, results) => {
         if (err) {
@@ -205,7 +205,10 @@ app.post('/getUserList', (req, res) => {
             return res.status(500).json({ error: 'Database query error' });
         }
 
-        res.json(results);
+        // Wrap each result in an object with a 'profile' key
+        const response = results.map((profile) => ({ profile }));
+
+        res.json(response);
     });
 });
 
