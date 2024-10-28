@@ -189,6 +189,25 @@ app.post('/send-otp', (req, res) => {
     });
 });
 
+app.post('/getUserList', (req, res) => {
+    const macIds = req.body.map((item) => item.mac_id);
+
+    if (!macIds || macIds.length === 0) {
+        return res.status(400).json({ error: 'mac_id list cannot be empty' });
+    }
+
+    // Construct the SQL query to fetch user profiles based on mac_ids
+    const query = `SELECT phone_number FROM user_profile WHERE mac_id IN (?)`;
+
+    db.query(query, [macIds], (err, results) => {
+        if (err) {
+            console.error('Error executing query:', err);
+            return res.status(500).json({ error: 'Database query error' });
+        }
+
+        res.json(results);
+    });
+});
 
 app.listen(3001, () => {
     console.log('Server Running');
